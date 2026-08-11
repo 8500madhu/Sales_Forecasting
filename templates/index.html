@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Sales Forecasting Engine</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="brand">
+                <span class="icon">📈</span>
+                <h1>Sales Forecasting Dashboard</h1>
+            </div>
+            <p>Predict target sales using trained machine learning models</p>
+        </header>
+
+        <main class="content-grid">
+            <!-- Form Section -->
+            <section class="card form-card">
+                <h2>Forecasting Parameters</h2>
+                <form id="predictionForm">
+                    <div class="form-group">
+                        <label for="store">Store ID</label>
+                        <input type="number" id="store" name="store" min="1" placeholder="e.g., 1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="item">Item ID</label>
+                        <input type="number" id="item" name="item" min="1" placeholder="e.g., 1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">Target Date</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn-primary">
+                        <span>Generate Forecast</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <section class="card result-card">
+                <h2>Prediction Summary</h2>
+                
+                <div id="placeholderState" class="state-container">
+                    <div class="placeholder-icon">🔮</div>
+                    <p>Enter parameters on the left to generate sales forecasts.</p>
+                </div>
+
+                <div id="loadingState" class="state-container hidden">
+                    <div class="spinner"></div>
+                    <p>Running model inference...</p>
+                </div>
+
+                <div id="resultState" class="state-container hidden">
+                    <div class="metric-box">
+                        <span class="metric-label">Predicted Units Sold</span>
+                        <span class="metric-value" id="predValue">0</span>
+                    </div>
+
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Formatted Date</span>
+                            <span class="detail-value" id="resDate">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Store ID</span>
+                            <span class="detail-value" id="resStore">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Item ID</span>
+                            <span class="detail-value" id="resItem">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="errorState" class="state-container error-box hidden">
+                    <p id="errorMessage">An error occurred during prediction.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById("predictionForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const store = document.getElementById("store").value;
+            const item = document.getElementById("item").value;
+            const date = document.getElementById("date").value;
+
+            const placeholderState = document.getElementById("placeholderState");
+            const loadingState = document.getElementById("loadingState");
+            const resultState = document.getElementById("resultState");
+            const errorState = document.getElementById("errorState");
+
+            // UI Reset
+            placeholderState.classList.add("hidden");
+            resultState.classList.add("hidden");
+            errorState.classList.add("hidden");
+            loadingState.classList.remove("hidden");
+
+            try {
+                const response = await fetch("/predict", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ store, item, date })
+                });
+
+                const data = await response.json();
+                loadingState.classList.add("hidden");
+
+                if (response.ok && data.success) {
+                    document.getElementById("predValue").innerText = data.predicted_sales.toLocaleString();
+                    document.getElementById("resDate").innerText = data.date;
+                    document.getElementById("resStore").innerText = data.store;
+                    document.getElementById("resItem").innerText = data.item;
+                    resultState.classList.remove("hidden");
+                } else {
+                    document.getElementById("errorMessage").innerText = data.error || "Execution failed.";
+                    errorState.classList.remove("hidden");
+                }
+            } catch (err) {
+                loadingState.classList.add("hidden");
+                document.getElementById("errorMessage").innerText = "Network error. Please try again.";
+                errorState.classList.remove("hidden");
+            }
+        });
+    </script>
+</body>
+</html>
